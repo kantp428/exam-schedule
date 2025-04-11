@@ -2,63 +2,74 @@
 
 import { useEffect, useState } from 'react';
 
-// Declare the interface for Exam data
-interface Exam {
-  Date: string;
-  Time: string;
-  Subject: string;
-  Room: string;
-  Notes: string;
-  StudentNotes: string;
-}
-
-const ExamSchedule = () => {
-  const [exams, setExams] = useState<Exam[]>([]);
+export default function ExamSchedule() {
+  const [data, setData] = useState<any[]>([]);  // Array of exam data
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    const fetchExams = async () => {
+    const fetchSchedule = async () => {
+      setLoading(true); // Set loading state to true before fetching data
       try {
-        const res = await fetch('/api/getExams');
-        const data:Exam[] = await res.json();
+        const res = await fetch('/api/sheet');
+        const json = await res.json();
 
-        console.log('Fetched data:', data); // Log the fetched data
+        // Log the actual response to inspect its structure
+        console.log('API Response:', json);
 
-        // Check if the data is an array
-        if (Array.isArray(data)) {
-          setExams(data);
+        if (Array.isArray(json)) {  // Check if response is an array of exam objects
+          setData(json);  // Set the response data to the state
+        } else if (json.error) {
+          setError(json.error);  // Tell error of json
         } else {
-          throw new Error('Data is not in the expected format.');
+          setError('Unexpected response structure');
         }
-      } catch (error) {
-        console.error(error);
-        setError('Failed to fetch data.');
+      } catch (err: any) {
+        setError('Failed to load exam schedule');  // Handle fetch error
+      } finally {
+        setLoading(false);  // Set loading to false after fetch
       }
     };
 
-    fetchExams();
+    fetchSchedule();
   }, []);
 
   return (
-    <div>
-      <h1>Exam Schedule</h1>
-      {error && <p style={{ color: 'red' }}>{error}</p>} {/* Display error if there's any */}
-      <ul>
-        {Array.isArray(exams) && exams.length > 0 ? (
-          exams.map((exam, index) => (
-            <li key={index}>
-              <strong>{exam.Subject}</strong> on {exam.Date} at {exam.Time} in Room {exam.Room}.
-              <br />
-              Notes: {exam.Notes} <br />
-              Student Notes: {exam.StudentNotes}
-            </li>
-          ))
-        ) : (
-          <p>No exams scheduled.</p>
-        )}
-      </ul>
+    <div className="p-6">
+      <h1 className="text-2xl font-bold mb-4">Exam Schedule</h1>
+
+      {error && <p className="text-red-500">{error}</p>} 
+
+      {loading ? (
+        <p>Loading exam schedule...</p>
+      ) : data.length > 0 ? (
+        <table className="border border-gray-300">
+          <thead>
+            <tr>
+              <th className="border px-3 py-2">Date</th>
+              <th className="border px-3 py-2">Time</th>
+              <th className="border px-3 py-2">Subject</th>
+              <th className="border px-3 py-2">Room</th>
+              <th className="border px-3 py-2">Notes</th>
+              <th className="border px-3 py-2">Student Notes</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.map((exam, rowIndex) => (
+              <tr key={rowIndex}>
+                <td className="border px-3 py-2">{exam.Date}</td>
+                <td className="border px-3 py-2">{exam.Time}</td>
+                <td className="border px-3 py-2">{exam.Subject}</td>
+                <td className="border px-3 py-2">{exam.Room}</td>
+                <td className="border px-3 py-2">{exam.Notes}</td>
+                <td className="border px-3 py-2">{exam.StudentNotes}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      ) : (
+        <p>No data available</p>
+      )}
     </div>
   );
-};
-
-export default ExamSchedule;
+}
